@@ -13,10 +13,6 @@ export default function RouterComponent() {
             element: <HostRoom />,
         },
         {
-            path: "/connect",
-            element: <div>connect home</div>,
-        },
-        {
             path: "/connect/:room",
             element: <ClientRoom />,
         },
