@@ -1,13 +1,15 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Peer, DataConnection } from "peerjs";
 import { useEffect, useRef, useState } from "react";
 import AudioPlayer from "react-h5-audio-player";
 import QRCode from "react-qr-code";
 import { generateRandomId } from "@/assets/generateRandomId";
 import "../AudioPlayerComponent/style.css";
+import H5AudioPlayer from "react-h5-audio-player";
 
 export default function HostRoom() {
-    const playerRef = useRef(null);
-    const [myPeer, setMyPeer] = useState<Peer | null>(null);
+    const playerRef = useRef<H5AudioPlayer>(null);
+    const [, setMyPeer] = useState<Peer | null>(null);
     const [myConnection, setMyConnection] = useState<DataConnection | null>();
     const [pad, setPad] = useState<{
         id: number;
@@ -15,7 +17,6 @@ export default function HostRoom() {
         file_id: string;
     } | null>(null);
 
-    const [isLoading, setIsLoading] = useState(true);
     const [statusMessage, setStatusMessage] = useState("");
     const [qrCode, setQrCode] = useState("");
 
@@ -61,14 +62,15 @@ export default function HostRoom() {
                                 `Pad recebido: ${resp.data?.name}`
                             );
                             setPad(resp.data);
-                            playerRef.current?.audio.current.play();
+                            playerRef.current?.audio.current?.play();
+
                             setStatusMessage(
                                 `Tocando o pad em ${resp.data?.name}!`
                             );
                             break;
                         case "player":
                             console.log("player: ", playerRef.current);
-                            playerRef.current?.audio.current.pause();
+                            playerRef.current?.audio.current?.pause();
                             break;
                     }
                 });

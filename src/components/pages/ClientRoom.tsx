@@ -1,13 +1,13 @@
 import { padTons } from "@/assets/constants";
 import { cn } from "@/lib/utils";
 import { Peer, DataConnection } from "peerjs";
-import { ButtonHTMLAttributes, ReactElement, useEffect, useState } from "react";
+import { ButtonHTMLAttributes, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 export default function ClientRoom() {
     const params = useParams();
     const { room } = params as { room: string };
-    const [myPeer, setMyPeer] = useState<Peer | null>(null);
+    const [, setMyPeer] = useState<Peer | null>(null);
     const [myConnection, setMyConnection] = useState<DataConnection | null>(
         null
     );
