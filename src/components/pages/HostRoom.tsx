@@ -49,11 +49,12 @@ export default function HostRoom() {
 
                 connection.on("data", (data: unknown) => {
                     const resp = data as {
-                        type: "pad" | "player";
+                        type: "pad" | "player" | "player.volume";
                         data: {
                             id: number;
                             name: string;
                             file_id: string;
+                            volume: number | undefined;
                         } | null;
                     };
                     switch (resp.type) {
@@ -72,6 +73,10 @@ export default function HostRoom() {
                             console.log("player: ", playerRef.current);
                             playerRef.current?.audio.current?.pause();
                             break;
+                        case "player.volume":
+                            playerRef.current!.audio.current!.volume =
+                                resp.data?.volume ||
+                                playerRef.current!.audio.current!.volume;
                     }
                 });
             });
@@ -105,6 +110,15 @@ export default function HostRoom() {
                     <AudioPlayer
                         ref={playerRef}
                         autoPlay
+                        volume={0.5}
+                        onVolumeChange={() => {
+                            const volume =
+                                playerRef.current?.audio.current?.volume;
+                            myConnection?.send({
+                                type: "player.volume",
+                                data: { volume: Number(volume) * 100 },
+                            });
+                        }}
                         onPlay={() => {
                             setStatusMessage(
                                 () => `Tocando pad em ${pad.name}!`

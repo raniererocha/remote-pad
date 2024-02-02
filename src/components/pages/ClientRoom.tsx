@@ -1,7 +1,7 @@
 import { padTons } from "@/assets/constants";
 import { cn } from "@/lib/utils";
 import { Peer, DataConnection } from "peerjs";
-import { ButtonHTMLAttributes, useEffect, useState } from "react";
+import { ButtonHTMLAttributes, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 export default function ClientRoom() {
@@ -16,6 +16,7 @@ export default function ClientRoom() {
         if (!currentPad) return false;
         return currentPad === id;
     };
+    const inputVolumeRef = useRef<HTMLInputElement>(null);
     const handlePadClick = (pad: (typeof padTons)[0]) => {
         console.log("Cliquei");
         if (currentPad === pad.id) {
@@ -43,6 +44,10 @@ export default function ClientRoom() {
         myConnection?.send(payload);
         return;
     };
+    const handleChangeVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const volume = Number(e.currentTarget.value) / 100;
+        myConnection?.send({ type: "player.volume", data: { volume } });
+    };
     useEffect(() => {
         const initializePeer = async () => {
             const peer = new Peer();
@@ -63,11 +68,15 @@ export default function ClientRoom() {
 
                 connection.on("data", (data: unknown) => {
                     const resp = data as {
-                        type: "player.play" | "player.pause";
-                        data: { id: number };
+                        type: "player.play" | "player.pause" | "player.volume";
+                        data: { id: number; volume: number | undefined };
                     };
                     if (resp.type === "player.pause") {
                         setCurrentPad(() => null);
+                    } else if (resp.type === "player.volume") {
+                        inputVolumeRef.current!.value = String(
+                            resp.data.volume
+                        );
                     } else {
                         setCurrentPad(() => resp.data.id);
                     }
@@ -92,6 +101,20 @@ export default function ClientRoom() {
                             onClick={() => handlePadClick(pad)}
                         />
                     ))}
+            </section>
+            <section className="flex flex-col items-center">
+                <h1>Controles do player</h1>
+                <p>Volume</p>
+                <div className="flex w-full gap-4">
+                    <input
+                        ref={inputVolumeRef}
+                        className="flex-1"
+                        type="range"
+                        defaultValue={50}
+                        min={0}
+                        onChange={handleChangeVolume}
+                    />
+                </div>
             </section>
         </main>
     );
