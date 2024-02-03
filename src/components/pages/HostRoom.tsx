@@ -6,6 +6,9 @@ import QRCode from "react-qr-code";
 import { generateRandomId } from "@/assets/generateRandomId";
 import "../AudioPlayerComponent/style.css";
 import H5AudioPlayer from "react-h5-audio-player";
+import { useParams } from "react-router-dom";
+import StatusIndicator from "../StatusIndicator";
+import { padTons } from "@/assets/constants";
 
 export default function HostRoom() {
     const playerRef = useRef<H5AudioPlayer>(null);
@@ -17,32 +20,50 @@ export default function HostRoom() {
         file_id: string;
     } | null>(null);
 
-    const [statusMessage, setStatusMessage] = useState("");
+    const [status, setStatus] = useState<{
+        type: "connected" | "disconnected" | "waiting";
+        message: string;
+    }>({ type: "disconnected", message: "" });
     const [qrCode, setQrCode] = useState("");
+    const { roomId } = useParams<{ roomId: string }>();
 
     useEffect(() => {
         const initializePeer = async () => {
-            const id = generateRandomId();
-            const peer = new Peer(id); // Use the default PeerJS server
+            const peer = new Peer(roomId!); // Use the default PeerJS server
 
             peer.on("open", (id) => {
                 console.log("Receiver ID:", id);
-                setStatusMessage(
-                    "Conexão aberta, aguardando conexão do controlador"
-                );
+                setStatus({
+                    type: "waiting",
+                    message:
+                        "Conexão aberta, aguardando conexão do controlador",
+                });
                 setQrCode(window.location.origin + "/connect/" + id);
-                /* setQrCode("http://192.168.0.8:5173" + "/connect/" + id); */
             });
 
             // Listen for connections
             peer.on("connection", (connection: DataConnection) => {
-                setStatusMessage(
-                    "Conexão encontrada, aguardando estabeler conexão"
-                );
+                setStatus({
+                    type: "waiting",
+                    message: "Conexão encontrada, aguardando estabeler conexão",
+                });
                 connection.on("open", () => {
-                    setStatusMessage(
-                        "Conexão estabelecida, aguardando envio de dados do controlador:"
-                    );
+                    playerRef.current?.audio.current?.src &&
+                        connection.send({
+                            type: "playar.play",
+                            data: {
+                                id: padTons.filter(
+                                    (pad) =>
+                                        pad.file_id ===
+                                        playerRef.current?.audio.current?.src
+                                )[0].id,
+                            },
+                        });
+                    setStatus({
+                        type: "connected",
+                        message:
+                            "Conexão estabelecida, aguardando envio de dados do controlador",
+                    });
                     setQrCode("");
                     setMyConnection(connection);
                 });
@@ -59,18 +80,20 @@ export default function HostRoom() {
                     };
                     switch (resp.type) {
                         case "pad":
-                            setStatusMessage(
-                                `Pad recebido: ${resp.data?.name}`
-                            );
+                            setStatus({
+                                type: "connected",
+                                message: `Pad recebido: ${resp.data?.name}`,
+                            });
                             setPad(resp.data);
+
                             playerRef.current?.audio.current?.play();
 
-                            setStatusMessage(
-                                `Tocando o pad em ${resp.data?.name}!`
-                            );
+                            setStatus({
+                                type: "connected",
+                                message: `Tocando o pad em ${resp.data?.name}!`,
+                            });
                             break;
                         case "player":
-                            console.log("player: ", playerRef.current);
                             playerRef.current?.audio.current?.pause();
                             break;
                         case "player.volume":
@@ -79,7 +102,16 @@ export default function HostRoom() {
                                 playerRef.current!.audio.current!.volume;
                     }
                 });
+                connection.on("close", () => {
+                    setStatus({
+                        type: "disconnected",
+                        message: "Conexão perdida!",
+                    });
+                });
             });
+            /*  peer.on("close", () => {
+                setStatus({ type: "disconnected", message: "Conexão perdida" });
+            }); */
 
             setMyPeer(peer);
         };
@@ -89,12 +121,7 @@ export default function HostRoom() {
 
     return (
         <main className="w-screen h-screen flex flex-col py-10">
-            {statusMessage && (
-                <p className="text-center font-semibold">
-                    Status:{" "}
-                    <span className="font-normal italic">{statusMessage}</span>
-                </p>
-            )}
+            {status.message && <StatusIndicator status={status} />}
             {qrCode && (
                 <>
                     <div className="bg-white p-4 w-fit m-auto">
@@ -109,7 +136,8 @@ export default function HostRoom() {
                 <div className="px-6 py-2">
                     <AudioPlayer
                         ref={playerRef}
-                        autoPlay
+                        autoPlay={true}
+                        loop={true}
                         volume={0.5}
                         onVolumeChange={() => {
                             const volume =
@@ -120,18 +148,20 @@ export default function HostRoom() {
                             });
                         }}
                         onPlay={() => {
-                            setStatusMessage(
-                                () => `Tocando pad em ${pad.name}!`
-                            );
+                            setStatus(() => ({
+                                type: "connected",
+                                message: `Tocando pad em ${pad.name}!`,
+                            }));
                             myConnection?.send({
                                 type: "player.play",
                                 data: { id: pad.id },
                             });
                         }}
                         onPause={() => {
-                            setStatusMessage(
-                                () => `Pad em ${pad.name} pausado!`
-                            );
+                            setStatus(() => ({
+                                type: "connected",
+                                message: `Pad em ${pad.name} pausado!`,
+                            }));
                             myConnection?.send({
                                 type: "player.pause",
                                 data: null,

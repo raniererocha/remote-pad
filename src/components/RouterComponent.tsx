@@ -9,7 +9,7 @@ export default function RouterComponent() {
             element: <Home />,
         },
         {
-            path: "/host/",
+            path: "/host/:roomId",
             element: <HostRoom />,
         },
         {

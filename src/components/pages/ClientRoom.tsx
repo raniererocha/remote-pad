@@ -3,11 +3,19 @@ import { cn } from "@/lib/utils";
 import { Peer, DataConnection } from "peerjs";
 import { ButtonHTMLAttributes, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import StatusIndicator from "../StatusIndicator";
 
 export default function ClientRoom() {
     const params = useParams();
     const { room } = params as { room: string };
     const [, setMyPeer] = useState<Peer | null>(null);
+    const [status, setStatus] = useState<{
+        type: "connected" | "disconnected" | "waiting";
+        message: string;
+    }>({
+        type: "disconnected",
+        message: "",
+    });
     const [myConnection, setMyConnection] = useState<DataConnection | null>(
         null
     );
@@ -55,15 +63,13 @@ export default function ClientRoom() {
             peer.on("open", (id) => {
                 console.log(id);
                 const connection = peer.connect(room);
-                /* peer.on('connection', conn => {
-                    conn.on('open', () => {
-                        console.log('conexão estabelecida com a sala')
-                    })
-                    conn.on('data', data => {})
-                }) */
                 setMyConnection(connection);
                 connection.on("open", () => {
                     console.log("Conexão aberta");
+                    setStatus({
+                        type: "connected",
+                        message: "Conectado a sala: " + room,
+                    });
                 });
 
                 connection.on("data", (data: unknown) => {
@@ -81,6 +87,15 @@ export default function ClientRoom() {
                         setCurrentPad(() => resp.data.id);
                     }
                 });
+                connection.on("close", () => {
+                    setStatus({
+                        type: "disconnected",
+                        message: "Conexão perdida, reestabelecendo conexão...",
+                    });
+                    setInterval(() => {
+                        window.location.reload();
+                    }, 3000);
+                });
             });
             setMyPeer(peer);
         };
@@ -91,6 +106,11 @@ export default function ClientRoom() {
             <p className="text-center p-5 font-semibold">
                 Room: <span className="font-normal italic">{room}</span>
             </p>
+            {status.message && (
+                <p className=" pb-5 ">
+                    <StatusIndicator status={status} />
+                </p>
+            )}
             <section className="grid grid-cols-3 md:grid-cols-4 gap-2">
                 {myConnection &&
                     padTons.map((pad) => (
