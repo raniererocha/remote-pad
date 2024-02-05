@@ -1,5 +1,6 @@
 import { generateRandomId } from "@/assets/generateRandomId";
 import { useNavigate } from "react-router-dom";
+import Button from "../Button";
 
 export default function Home() {
     const navigate = useNavigate();
@@ -11,18 +12,11 @@ export default function Home() {
                     <span className="font-semibold">Remote Pad</span>
                 </h1>
                 <div className="space-y-3 flex flex-col">
-                    <button
-                        className="bg-primary text-primary-foreground p-2 rounded font-semibold"
+                    <Button
                         onClick={() => navigate("/host/" + generateRandomId())}
                     >
                         Crie uma sala
-                    </button>
-                    {/*  <button
-                        className="bg-primary text-primary-foreground p-2 rounded font-semibold"
-                        onClick={() => navigate("/connect")}
-                    >
-                        Entre em uma sala existente
-                    </button> */}
+                    </Button>
                 </div>
             </section>
         </main>

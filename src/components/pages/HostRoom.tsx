@@ -3,7 +3,6 @@ import { Peer, DataConnection } from "peerjs";
 import { useEffect, useRef, useState } from "react";
 import AudioPlayer from "react-h5-audio-player";
 import QRCode from "react-qr-code";
-import { generateRandomId } from "@/assets/generateRandomId";
 import "../AudioPlayerComponent/style.css";
 import H5AudioPlayer from "react-h5-audio-player";
 import { useParams } from "react-router-dom";
@@ -19,7 +18,6 @@ export default function HostRoom() {
         name: string;
         file_id: string;
     } | null>(null);
-
     const [status, setStatus] = useState<{
         type: "connected" | "disconnected" | "waiting";
         message: string;
@@ -32,7 +30,6 @@ export default function HostRoom() {
             const peer = new Peer(roomId!); // Use the default PeerJS server
 
             peer.on("open", (id) => {
-                console.log("Receiver ID:", id);
                 setStatus({
                     type: "waiting",
                     message:
@@ -50,7 +47,7 @@ export default function HostRoom() {
                 connection.on("open", () => {
                     playerRef.current?.audio.current?.src &&
                         connection.send({
-                            type: "playar.play",
+                            type: "player.play",
                             data: {
                                 id: padTons.filter(
                                     (pad) =>
@@ -59,11 +56,23 @@ export default function HostRoom() {
                                 )[0].id,
                             },
                         });
+
+                    connection.send({
+                        type: "player.volume",
+                        data: {
+                            volume:
+                                Number(
+                                    playerRef.current?.audio.current?.volume
+                                ) * 100 || 50,
+                        },
+                    });
+
                     setStatus({
                         type: "connected",
                         message:
                             "Conexão estabelecida, aguardando envio de dados do controlador",
                     });
+
                     setQrCode("");
                     setMyConnection(connection);
                 });
@@ -95,6 +104,7 @@ export default function HostRoom() {
                             break;
                         case "player":
                             playerRef.current?.audio.current?.pause();
+
                             break;
                         case "player.volume":
                             playerRef.current!.audio.current!.volume =
@@ -109,15 +119,11 @@ export default function HostRoom() {
                     });
                 });
             });
-            /*  peer.on("close", () => {
-                setStatus({ type: "disconnected", message: "Conexão perdida" });
-            }); */
-
             setMyPeer(peer);
         };
 
         initializePeer();
-    }, []);
+    }, [roomId]);
 
     return (
         <main className="w-screen h-screen flex flex-col py-10">
@@ -152,6 +158,7 @@ export default function HostRoom() {
                                 type: "connected",
                                 message: `Tocando pad em ${pad.name}!`,
                             }));
+
                             myConnection?.send({
                                 type: "player.play",
                                 data: { id: pad.id },
@@ -162,6 +169,7 @@ export default function HostRoom() {
                                 type: "connected",
                                 message: `Pad em ${pad.name} pausado!`,
                             }));
+
                             myConnection?.send({
                                 type: "player.pause",
                                 data: null,

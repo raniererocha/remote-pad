@@ -1,9 +1,10 @@
 import { padTons } from "@/assets/constants";
-import { cn } from "@/lib/utils";
 import { Peer, DataConnection } from "peerjs";
-import { ButtonHTMLAttributes, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import StatusIndicator from "../StatusIndicator";
+import PadButtons from "../PadButtons";
+import VolumeController from "../VolumeController";
 
 export default function ClientRoom() {
     const params = useParams();
@@ -20,13 +21,10 @@ export default function ClientRoom() {
         null
     );
     const [currentPad, setCurrentPad] = useState<number | null>(null);
-    const checkIfPadIsClicked = (id: number) => {
-        if (!currentPad) return false;
-        return currentPad === id;
-    };
+    const [isLoading, setIsLoading] = useState(true);
+
     const inputVolumeRef = useRef<HTMLInputElement>(null);
     const handlePadClick = (pad: (typeof padTons)[0]) => {
-        console.log("Cliquei");
         if (currentPad === pad.id) {
             setCurrentPad(() => null);
             const payload = { type: "player", data: null } as {
@@ -60,16 +58,15 @@ export default function ClientRoom() {
         const initializePeer = async () => {
             const peer = new Peer();
 
-            peer.on("open", (id) => {
-                console.log(id);
+            peer.on("open", () => {
                 const connection = peer.connect(room);
                 setMyConnection(connection);
                 connection.on("open", () => {
-                    console.log("Conexão aberta");
                     setStatus({
                         type: "connected",
                         message: "Conectado a sala: " + room,
                     });
+                    setIsLoading(false);
                 });
 
                 connection.on("data", (data: unknown) => {
@@ -81,7 +78,7 @@ export default function ClientRoom() {
                         setCurrentPad(() => null);
                     } else if (resp.type === "player.volume") {
                         inputVolumeRef.current!.value = String(
-                            resp.data.volume
+                            resp.data.volume!
                         );
                     } else {
                         setCurrentPad(() => resp.data.id);
@@ -100,7 +97,7 @@ export default function ClientRoom() {
             setMyPeer(peer);
         };
         initializePeer();
-    }, []);
+    }, [room]);
     return (
         <main className="w-screen h-screen p-10">
             <p className="text-center p-5 font-semibold">
@@ -111,50 +108,28 @@ export default function ClientRoom() {
                     <StatusIndicator status={status} />
                 </p>
             )}
-            <section className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                {myConnection &&
-                    padTons.map((pad) => (
-                        <PadButton
-                            key={pad.id}
-                            pad={pad}
-                            isClicked={checkIfPadIsClicked(pad.id)}
-                            onClick={() => handlePadClick(pad)}
-                        />
-                    ))}
-            </section>
-            <section className="flex flex-col items-center">
-                <h1>Controles do player</h1>
-                <p>Volume</p>
-                <div className="flex w-full gap-4">
-                    <input
-                        ref={inputVolumeRef}
-                        className="flex-1"
-                        type="range"
-                        defaultValue={50}
-                        min={0}
-                        onChange={handleChangeVolume}
+            {!isLoading ? (
+                <>
+                    <PadButtons
+                        pads={padTons}
+                        currentPad={currentPad}
+                        handlePadClick={handlePadClick}
                     />
-                </div>
-            </section>
-        </main>
-    );
-}
-
-type PadButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-    pad: (typeof padTons)[0];
-    isClicked: boolean;
-};
-
-function PadButton({ pad, isClicked, ...props }: PadButtonProps) {
-    return (
-        <button
-            {...props}
-            className={cn(
-                "w-full p-2 rounded",
-                isClicked ? "bg-primary" : "bg-secondary"
+                    <section className="flex flex-col items-center">
+                        <h1>Controles do player</h1>
+                        <VolumeController
+                            ref={inputVolumeRef}
+                            onChange={handleChangeVolume}
+                        />
+                    </section>
+                </>
+            ) : (
+                <section className="w-full text-center">
+                    <p className="animate-pulse font-bold text-2xl">
+                        Carregando sala...
+                    </p>
+                </section>
             )}
-        >
-            {pad.name}
-        </button>
+        </main>
     );
 }
